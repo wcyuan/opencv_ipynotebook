@@ -19,24 +19,31 @@ def show_url(url):
     image = PIL.Image.open(image_file)
     pylab.imshow(array(image))
     return image
+
 # Appears to return UTC time
 def ts(*args):
     now = datetime.datetime.now()
     ts = datetime.datetime.strftime(now, "%Y%m%d %H:%M:%S.%f")
     return "[{0}] {1}".format(ts, " ".join(str(a) for a in args))
 
-# This reads all the frames of tennis.mp4 info a numpy array.
-def read_video_file(filename, max_frame=500):
+
+def read_video_frames(filename, from_frame, to_frame):
+    """
+    This reads all the frames of a video file into a numpy array. 
+    """
+	
     # setup video capture
     cap = cv2.VideoCapture(filename)
-    
+    cap.set(cv2.CAP_PROP_POS_FRAMES, from_frame)
     frames = []
     # get frame, store in array
-    for ii in xrange(max_frame):
+    for ii in xrange(from_frame, 1+to_frame):
         #print ts("Frame:", ii)
         ret, im = cap.read()
+			
         if not ret:
             break
+        
         frames.append(im)
     cap.release()
     print ts("Converting to np array")
@@ -46,16 +53,17 @@ def read_video_file(filename, max_frame=500):
     print frames[-1].shape
     print frames.shape
     print ts("Done")
-
     return frames
-
+	
+def read_video_file(filename, max_frame=1500):
+    return read_video_frames(filename, 0, max_frame)
 
 def run(cmd):
     import subprocess
     proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     return proc.communicate()
 
-def commit(file=NOTEBOOK_FILE_NAME, msg="Periodic Update"):
+def commit(file, msg="Periodic Update"):
     print run(["git", "commit", "-m", msg, file])
     # Pushes to https://github.com/wcyuan/opencv_ipynotebook
     print run(["git", "push"])
@@ -117,38 +125,12 @@ def center(X):
     totalsum = X.sum() / (n**2)
     
     #center
-    Y = array([[ X[i,j]-rowsum[i]-colsum[j]+totalsum for i in range(n) ] for j in range(n)])
+    Y = array([[ X[i,j]-rowsum[i]-colsum[j]+totalsum for i in range(n) ]
+               for j in range(n)])
     
     return Y
 
-# Murali's formula to calculate initial velocity, from 
-# http://donthireddy.us/tennis/speed.html
-
-import math
-# published numbers  from a now dead link
-KNOWN_SERVE_SPEED= 120.
-KNOWN_SPEED_AT_BOUNCE= 87.0
-DISTANCE_TRAVELED=60.
-
-# A constant for formula:
-K= math.log(120./87)/60
-
-def init_speed(nf, d=60, fps=29.97):
-    speed = ( math.exp(K*d) - 1) / (5280.*K * nf) * fps * 3600
-    return round(speed*100)/100
-
-def avg_speed(nf, d=60, fps=29.97):
-    speed = d / (nf / fps ) * (3600./5280.)
-    return round(speed*100)/100
-
-# Create a single grayscale image where for each pixel you figure out the
-# median brightness in the entire video for that pixel.  Then in your
-# image, your pixel color is the brightness that is most different
-# from the median.
-
-# Increase contrast to make the non-zero pixels show up stronger.
-contrast = 5
-
+#
 def diff_median(frames, start, end):
     # convert a portion of the video to grayscale
     gray = array([cv2.cvtColor(frames[ii], cv2.COLOR_RGB2GRAY)
@@ -197,4 +179,32 @@ def diff_filtered_median(frames, start, end, clean = False, contrast = 5):
     #pylab.imshow(medians)
     #pylab.figure()
     pylab.imshow(maxes)
+
+# Murali's formula to calculate initial velocity, from 
+# http://donthireddy.us/tennis/speed.html
+
+import math
+# published numbers  from a now dead link
+KNOWN_SERVE_SPEED= 120.
+KNOWN_SPEED_AT_BOUNCE= 87.0
+DISTANCE_TRAVELED=60.
+
+# A constant for formula:
+K= math.log(120./87)/60
+
+def init_speed(nf, d=60, fps=29.97):
+    speed = ( math.exp(K*d) - 1) / (5280.*K * nf) * fps * 3600
+    return round(speed*100)/100
+
+def avg_speed(nf, d=60, fps=29.97):
+    speed = d / (nf / fps ) * (3600./5280.)
+    return round(speed*100)/100
+
+# Create a single grayscale image where for each pixel you figure out the
+# median brightness in the entire video for that pixel.  Then in your
+# image, your pixel color is the brightness that is most different
+# from the median.
+
+# Increase contrast to make the non-zero pixels show up stronger.
+contrast = 5
 
