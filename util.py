@@ -29,7 +29,7 @@ def ts(*args):
 
 def read_video_frames(filename, from_frame, to_frame):
     """
-    This reads all the frames of a video file into a numpy array. 
+    This reads the requested range of frames of a video file into a numpy array. 
     """
 	
     # setup video capture
